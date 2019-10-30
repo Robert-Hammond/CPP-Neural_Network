@@ -2,6 +2,7 @@
 a neural net but it's just STL
 
 author:  Robert Hammond
+
 start date:    10.13.2019 
 
 current state of project: figuring out how I want to do backprop
