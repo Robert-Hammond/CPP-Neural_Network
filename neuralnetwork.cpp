@@ -6,6 +6,7 @@
 #include <fstream>
 #include <cstdlib>
 #include <ctime>
+#include <cmath>
 /**
  * Argument Constructor for new neural networks.
  */
@@ -45,6 +46,46 @@ NeuralNetwork::NeuralNetwork(std::vector<unsigned int> the_num_layer_nodes)
             biases[layer][node] = getRandomBias();
         }
     }
+}
+
+/**
+ * The activation function is applied to each node after adding up all outputs
+ * from all the connections of the previous layer.
+ * Right now, I'm going to use a sigmoid because this is a learning exercise.
+ * This might change in the future, and I might add a parameter that identifies
+ * which activation function to use (i.e. Sigmoid, ReLU, arctan, you name it).
+ * @return a float between 0 and 1 (0 for more negative inputs and 1 for more
+ * positive inputs).
+ */
+float NeuralNetwork::activation_function(float x) const
+{
+    return 1.0 / (1.0 + exp(-x));
+}
+
+/**
+ * Run an input through the network and return the output.
+ * If is_training is not specified, it is assumed this input should not
+ * backpropogate.
+ */
+float *NeuralNetwork::run(float *input, bool is_training)
+{
+    // layer is that which we are updating the values, starting at 1
+    for (unsigned int layer = 1; layer < num_layers; ++layer)
+    {
+        for (unsigned int node = 0; node < num_layer_nodes[layer]; ++node)
+        {
+            float total = 0;
+            for (unsigned int prev_node = 0; prev_node < num_layer_nodes[layer - 1]; ++prev_node)
+            {
+                total += weights[layer][node][prev_node] * activations[layer - 1][prev_node] + biases[layer][node];
+            }
+            total = activation_function(total);
+            activations[layer][node] = total;
+        }
+    }
+    if (is_training)
+        /*backpropogate()*/;
+    return activations[num_layers - 1];
 }
 
 /**
@@ -104,7 +145,8 @@ void NeuralNetwork::save() const
         for (unsigned int node = 0; node < num_layer_nodes[layer]; ++node)
         {
             // the biases first
-            out << std::endl << biases[layer][node] << std::endl;
+            out << std::endl
+                << biases[layer][node] << std::endl;
             // now the weights
             for (int preceding_node = 0; preceding_node < num_layer_nodes[layer - 1]; ++preceding_node)
                 out << weights[layer][node][preceding_node] << " ";
@@ -112,9 +154,3 @@ void NeuralNetwork::save() const
     }
     out.close();
 }
-
-/**
- * Run an input through the network and return the output.
- * If is_training is not specified, it is assumed this input should not
- * backpropogate.
- */

@@ -8,12 +8,15 @@ using namespace std;
 #include <string>
 #include <iostream>
 #include "neuralnetwork.h"
+#include <cassert>
 
 void test_new_network();
+void test_run();
 
 int main()
 {
-    test_new_network();
+    // test_new_network();
+    test_run();
 }
 
 void test_new_network()
@@ -23,6 +26,17 @@ void test_new_network()
     structure.push_back(3);
     structure.push_back(4);
     structure.push_back(2);
-    NeuralNetwork net(structure);
-    net.save();
+    NeuralNetwork net1(structure);
+    net1.save();
+
+    // load a saved net
+    NeuralNetwork net2(net1.getFileName());
+}
+
+/**
+ * tests the run() operation without backpropogation.
+ */
+void test_run()
+{
+    ;
 }
