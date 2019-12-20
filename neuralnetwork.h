@@ -18,6 +18,7 @@ public:
     void delete_file();
 
     // save
+    void save(const std::string &save_file);
     void save() const;
 
     // public member functions
@@ -50,9 +51,10 @@ private:
     const float MIN_WEIGHT = -10, MAX_WEIGHT = 10,
                 MIN_BIAS = -10, MAX_BIAS = 10;
 
-    // PRIVATE METHODS
+    // PRIVATE HELPER METHODS
     float activation_function(float x) const;
     bool checkParameters(std::vector<unsigned int> the_num_layer_nodes) const;
     float getRandomWeight() const;
     float getRandomBias() const;
+    void backpropogate(const float *input);
 };
