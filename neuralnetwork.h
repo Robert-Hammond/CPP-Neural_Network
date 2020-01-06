@@ -7,7 +7,7 @@ class NeuralNetwork
 {
 public:
     // Argument constructor for a new net
-    NeuralNetwork(std::vector<unsigned int> the_num_layer_nodes);
+    NeuralNetwork(std::vector<unsigned int> the_num_layer_nodes, float lr = 0.03);
     // Argument constructor for an existing net
     NeuralNetwork(const std::string &the_file_name);
     // Copy constructor
@@ -22,10 +22,12 @@ public:
     void save() const;
 
     // public member functions
-    float *run(float *input, bool is_training = false);
+    float *run(float *input, float *expected_output = nullptr);
+    float cost(float *expected_output);
 
     // accessors
     const std::string &getFileName() const { return file_name; }
+    const std::vector<unsigned int> &getStructure() const { return num_layer_nodes; }
 
 private:
     // Important to keep this in a member variable, this file will store
@@ -48,13 +50,16 @@ private:
     float **biases;
 
     // CONSTANTS
-    const float MIN_WEIGHT = -10, MAX_WEIGHT = 10,
-                MIN_BIAS = -10, MAX_BIAS = 10;
+    const float MIN_WEIGHT = -1, MAX_WEIGHT = 1,
+                MIN_BIAS = -1, MAX_BIAS = 1;
+    float learning_rate = 0.03;
 
     // PRIVATE HELPER METHODS
     float activation_function(float x) const;
+    float activation_function_derivative(float x) const;
+    float activation_function_inverse(float x) const;
     bool checkParameters(std::vector<unsigned int> the_num_layer_nodes) const;
     float getRandomWeight() const;
     float getRandomBias() const;
-    void backpropogate(const float *input);
+    void backpropogate(const float *expected_output);
 };

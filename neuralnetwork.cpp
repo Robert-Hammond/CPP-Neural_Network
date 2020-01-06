@@ -11,7 +11,7 @@
 /**
  * Argument Constructor for new neural networks.
  */
-NeuralNetwork::NeuralNetwork(std::vector<unsigned int> the_num_layer_nodes)
+NeuralNetwork::NeuralNetwork(std::vector<unsigned int> the_num_layer_nodes, float lr)
 {
     // check parameters and assign variables
     if (!checkParameters(the_num_layer_nodes))
@@ -21,9 +21,10 @@ NeuralNetwork::NeuralNetwork(std::vector<unsigned int> the_num_layer_nodes)
     }
     num_layer_nodes = the_num_layer_nodes;
     num_layers = num_layer_nodes.size();
+    learning_rate = lr;
 
     // make a new file to store this net with a random file name
-    srand(time(NULL));
+    srand(time(nullptr));
     int rand_int = rand();
     file_name = "neural_network_" + std::to_string(rand_int) + ".txt";
 
@@ -67,7 +68,7 @@ NeuralNetwork::NeuralNetwork(const std::string &the_file_name)
 
     std::string token;
     int n;
-
+    istr >> token >> learning_rate; // token is "learning_rate:"
     istr >> token >> num_layers; // token is "structure:"
     for (unsigned int i = 0; i < num_layers; ++i)
     {
@@ -129,12 +130,27 @@ float NeuralNetwork::activation_function(float x) const
     return 1.0 / (1.0 + exp(-x));
 }
 
+float NeuralNetwork::activation_function_derivative(float x) const
+{
+    float activation = activation_function(x);
+    return activation * (1 - activation);
+}
+
+float NeuralNetwork::activation_function_inverse(float x) const
+{
+    if (x <= 0)
+        return -99999;
+    if (x >= 1)
+        return 99999;
+    return -log((1.0 / x) - 1.0);
+}
+
 /**
  * Run an input through the network and return the output.
  * If is_training is not specified, it is assumed this input should not
  * backpropogate.
  */
-float *NeuralNetwork::run(float *input, bool is_training)
+float *NeuralNetwork::run(float *input, float *expected_output)
 {
     for (unsigned int i = 0; i < num_layer_nodes[0]; ++i)
         activations[0][i] = input[i];
@@ -152,9 +168,17 @@ float *NeuralNetwork::run(float *input, bool is_training)
             activations[layer][node] = total;
         }
     }
-    if (is_training)
-        backpropogate(input);
+    if (expected_output)
+        backpropogate(expected_output);
     return activations[num_layers - 1];
+}
+
+float NeuralNetwork::cost(float *expected_output)
+{
+    float sum = 0;
+    for (unsigned int node = 0; node < num_layer_nodes[num_layers - 1]; ++node)
+        sum += pow(activations[num_layers - 1][node] - expected_output[node], 2);
+    return sum;
 }
 
 /**
@@ -205,8 +229,8 @@ void NeuralNetwork::save() const
 {
     std::ofstream out(file_name.c_str());
 
-    // write dimensions into the file
-    out << "structure: " << num_layers << std::endl;
+    // write learning rate and dimensions into the file
+    out << "learning_rate: " << learning_rate << std::endl << "structure: " << num_layers << std::endl;
     for (unsigned int i = 0; i < num_layers; ++i)
     {
         out << num_layer_nodes[i] << " ";
@@ -236,9 +260,53 @@ void NeuralNetwork::delete_file()
 }
 
 /**
- * Still in development
+ * Backpropogation algorithm was implemented with great help from
+ * https://en.wikipedia.org/wiki/Backpropagation
  */
-void NeuralNetwork::backpropogate(const float *input)
+void NeuralNetwork::backpropogate(const float *expected_output)
 {
-    ;
+    float *delta_values[num_layers];
+    // starting from the output layer going backwards
+    for (unsigned int layer = num_layers - 1; layer >= 1; --layer)
+    {
+        delta_values[layer] = new float[num_layer_nodes[layer]];
+        // node_j is of the current layer
+        for (unsigned int node_j = 0; node_j < num_layer_nodes[layer]; ++node_j)
+        {
+            // calculate the net input from previous functions
+            float net_j = activation_function_inverse(activations[layer][node_j]);
+
+            // calculate the delta value of this node
+            float delta_j = activation_function_derivative(net_j);
+            if (layer == num_layers - 1)
+            {
+                delta_j *= 2 * (activations[layer][node_j] - expected_output[node_j]);
+            }
+            else
+            {
+                float sum = 0;
+                // node_l is in the next layer
+                for (unsigned int node_l = 0; node_l < num_layer_nodes[layer + 1]; ++node_l)
+                {
+                    sum += weights[layer + 1][node_l][node_j] * delta_values[layer + 1][node_l];
+                }
+                delta_j *= sum;
+            }
+            delta_values[layer][node_j] = delta_j;
+
+            // node_i is of the previous layer
+            for (unsigned int node_i = 0; node_i < num_layer_nodes[layer - 1]; ++node_i)
+            {
+                // calculate the derivative of cost with respect to this weight
+                float dEdW = activations[layer - 1][node_i] * delta_j;
+                // apply this derivative to modify the weight
+                weights[layer][node_j][node_i] -= learning_rate * dEdW; // 0.03 is the learning rate for now
+            }
+            // the derivate of cost with respect to each bias is equal to the node's delta value
+            biases[layer][node_j] -= learning_rate * delta_j;
+        }
+    }
+    // deallocate the dynamic memory used for delta values
+    for (unsigned int layer = 1; layer < num_layers; ++layer)
+        delete[] delta_values[layer];
 }
