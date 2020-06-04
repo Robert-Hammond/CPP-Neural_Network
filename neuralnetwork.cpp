@@ -29,21 +29,21 @@ NeuralNetwork::NeuralNetwork(std::vector<unsigned int> the_num_layer_nodes, floa
     file_name = "neural_network_" + std::to_string(rand_int) + ".txt";
 
     // initialize variables with random weights and biases
-    activations = new float *[num_layers];
+    activations.resize(num_layers);
     // for both of the weights and biases, we only need to accout for num_layers - 1 layers,
     // but for the sake of consistent notation with activations we will just ingore the 0th slot
-    weights = new float **[num_layers];
-    biases = new float *[num_layers];
-    activations[0] = new float[num_layer_nodes[0]];
+    weights.resize(num_layers);
+    biases.resize(num_layers);
+    activations[0].resize(num_layer_nodes[0]);
 
     for (unsigned int layer = 1; layer < num_layers; ++layer)
     {
-        activations[layer] = new float[num_layer_nodes[layer]];
-        biases[layer] = new float[num_layer_nodes[layer]];
-        weights[layer] = new float *[num_layer_nodes[layer]];
+        activations[layer].resize(num_layer_nodes[layer]);
+        biases[layer].resize(num_layer_nodes[layer]);
+        weights[layer].resize(num_layer_nodes[layer]);
         for (unsigned int node = 0; node < num_layer_nodes[layer]; ++node)
         {
-            weights[layer][node] = new float[num_layer_nodes[layer - 1]];
+            weights[layer][node].resize(num_layer_nodes[layer - 1]);
             // randomize weights
             for (unsigned int prev_node = 0; prev_node < num_layer_nodes[layer - 1]; ++prev_node)
                 weights[layer][node][prev_node] = getRandomWeight();
@@ -69,27 +69,27 @@ NeuralNetwork::NeuralNetwork(const std::string &the_file_name)
     std::string token;
     int n;
     istr >> token >> learning_rate; // token is "learning_rate:"
-    istr >> token >> num_layers; // token is "structure:"
+    istr >> token >> num_layers;    // token is "structure:"
     for (unsigned int i = 0; i < num_layers; ++i)
     {
         istr >> n;
         num_layer_nodes.push_back(n);
     }
 
-    activations = new float *[num_layers];
-    weights = new float **[num_layers];
-    biases = new float *[num_layers];
-    activations[0] = new float[num_layer_nodes[0]];
+    activations.resize(num_layers);
+    weights.resize(num_layers);
+    biases.resize(num_layers);
+    activations[0].resize(num_layer_nodes[0]);
 
     // read all weights and biases
     for (unsigned int layer = 1; layer < num_layers; ++layer)
     {
-        activations[layer] = new float[num_layer_nodes[layer]];
-        biases[layer] = new float[num_layer_nodes[layer]];
-        weights[layer] = new float *[num_layer_nodes[layer]];
+        activations[layer].resize(num_layer_nodes[layer]);
+        biases[layer].resize(num_layer_nodes[layer]);
+        weights[layer].resize(num_layer_nodes[layer]);
         for (unsigned int node = 0; node < num_layer_nodes[layer]; ++node)
         {
-            weights[layer][node] = new float[num_layer_nodes[layer - 1]];
+            weights[layer][node].resize(num_layer_nodes[layer - 1]);
             // the biases first
             istr >> biases[layer][node];
             // now the weights
@@ -99,28 +99,12 @@ NeuralNetwork::NeuralNetwork(const std::string &the_file_name)
     }
 }
 
-NeuralNetwork::~NeuralNetwork()
-{
-    delete[] activations[0];
-    for (unsigned int layer = 1; layer < num_layers; ++layer)
-    {
-        delete[] activations[layer];
-        delete[] biases[layer];
-        for (unsigned int node = 0; node < num_layer_nodes[layer]; ++node)
-            delete[] weights[layer][node];
-        delete[] weights[layer];
-    }
-    delete[] activations;
-    delete[] biases;
-    delete[] weights;
-}
-
 /**
  * The activation function is applied to each node after adding up all outputs
  * from all the connections of the previous layer.
  * Right now, I'm going to use a sigmoid because this is a learning exercise.
  * This might change in the future, and I might add a parameter that identifies
- * which activation function to use (i.e. Sigmoid, ReLU, arctan, you name it).
+ * which activation function to use (i.e. Sigmoid, ReLU, tanh, you name it).
  * @return a float between 0 and 1 (0 for more negative inputs and 1 for more
  * positive inputs).
  * @param x any floating point number
@@ -147,10 +131,8 @@ float NeuralNetwork::activation_function_inverse(float x) const
 
 /**
  * Run an input through the network and return the output.
- * If is_training is not specified, it is assumed this input should not
- * backpropogate.
  */
-float *NeuralNetwork::run(float *input, float *expected_output)
+std::vector<float> NeuralNetwork::run(std::vector<float> input)
 {
     for (unsigned int i = 0; i < num_layer_nodes[0]; ++i)
         activations[0][i] = input[i];
@@ -168,12 +150,18 @@ float *NeuralNetwork::run(float *input, float *expected_output)
             activations[layer][node] = total;
         }
     }
-    if (expected_output)
-        backpropogate(expected_output);
     return activations[num_layers - 1];
 }
 
-float NeuralNetwork::cost(float *expected_output)
+std::vector<float> NeuralNetwork::run(std::vector<float> input, std::vector<float> expected_output)
+{
+    std::vector<float> result = run(input);
+    if (!expected_output.empty())
+        backpropogate(expected_output);
+    return result;
+}
+
+float NeuralNetwork::cost(std::vector<float> expected_output)
 {
     float sum = 0;
     for (unsigned int node = 0; node < num_layer_nodes[num_layers - 1]; ++node)
@@ -196,7 +184,7 @@ bool NeuralNetwork::checkParameters(std::vector<unsigned int> the_num_layer_node
 // random float in the range min to max
 float random(float min, float max)
 {
-    return min + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX / (max - min)));
+    return min + float(rand()) / (float(RAND_MAX / (max - min)));
 }
 
 /**
@@ -230,7 +218,8 @@ void NeuralNetwork::save() const
     std::ofstream out(file_name.c_str());
 
     // write learning rate and dimensions into the file
-    out << "learning_rate: " << learning_rate << std::endl << "structure: " << num_layers << std::endl;
+    out << "learning_rate: " << learning_rate << std::endl
+        << "structure: " << num_layers << std::endl;
     for (unsigned int i = 0; i < num_layers; ++i)
     {
         out << num_layer_nodes[i] << " ";
@@ -263,13 +252,13 @@ void NeuralNetwork::delete_file()
  * Backpropogation algorithm was implemented with great help from
  * https://en.wikipedia.org/wiki/Backpropagation
  */
-void NeuralNetwork::backpropogate(const float *expected_output)
+void NeuralNetwork::backpropogate(const std::vector<float> expected_output)
 {
-    float *delta_values[num_layers];
+    std::vector<std::vector<float>> delta_values(num_layers);
     // starting from the output layer going backwards
     for (unsigned int layer = num_layers - 1; layer >= 1; --layer)
     {
-        delta_values[layer] = new float[num_layer_nodes[layer]];
+        delta_values[layer].resize(num_layer_nodes[layer]);
         // node_j is of the current layer
         for (unsigned int node_j = 0; node_j < num_layer_nodes[layer]; ++node_j)
         {
@@ -300,13 +289,10 @@ void NeuralNetwork::backpropogate(const float *expected_output)
                 // calculate the derivative of cost with respect to this weight
                 float dEdW = activations[layer - 1][node_i] * delta_j;
                 // apply this derivative to modify the weight
-                weights[layer][node_j][node_i] -= learning_rate * dEdW; // 0.03 is the learning rate for now
+                weights[layer][node_j][node_i] -= learning_rate * dEdW;
             }
             // the derivate of cost with respect to each bias is equal to the node's delta value
             biases[layer][node_j] -= learning_rate * delta_j;
         }
     }
-    // deallocate the dynamic memory used for delta values
-    for (unsigned int layer = 1; layer < num_layers; ++layer)
-        delete[] delta_values[layer];
 }

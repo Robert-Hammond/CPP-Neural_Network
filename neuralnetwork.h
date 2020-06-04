@@ -12,8 +12,6 @@ public:
     NeuralNetwork(const std::string &the_file_name);
     // Copy constructor
     NeuralNetwork(const NeuralNetwork &other);
-    // Destructor
-    ~NeuralNetwork();
     // Delete file
     void delete_file();
 
@@ -22,8 +20,11 @@ public:
     void save() const;
 
     // public member functions
-    float *run(float *input, float *expected_output = nullptr);
-    float cost(float *expected_output);
+    // includes backpropogation
+    std::vector<float> run(std::vector<float> input, std::vector<float> expected_output);
+    // does not backpropogate
+    std::vector<float> run(std::vector<float> input);
+    float cost(std::vector<float> expected_output);
 
     // accessors
     const std::string &getFileName() const { return file_name; }
@@ -36,22 +37,23 @@ private:
     bool saved;
     unsigned int num_layers;
     std::vector<unsigned int> num_layer_nodes;
+    std::string activation_function_name;
 
     // REPRESENTATION
 
     // The activation of node n in layer l is
     // activations[l][n]
-    float **activations;
+    std::vector<std::vector<float>> activations;
     // The weight from node m in layer l-1 to node n in layer l is
     // weights[l][n][m]
-    float ***weights;
+    std::vector<std::vector<std::vector<float>>> weights;
     // The bias of node n in layer l is
     // biases[l][n]
-    float **biases;
+    std::vector<std::vector<float>> biases;
 
     // CONSTANTS
-    const float MIN_WEIGHT = -1, MAX_WEIGHT = 1,
-                MIN_BIAS = -1, MAX_BIAS = 1;
+    const float MIN_WEIGHT = -0.5, MAX_WEIGHT = 0.5,
+                MIN_BIAS = -0.5, MAX_BIAS = 0.5;
     float learning_rate = 0.03;
 
     // PRIVATE HELPER METHODS
@@ -61,5 +63,5 @@ private:
     bool checkParameters(std::vector<unsigned int> the_num_layer_nodes) const;
     float getRandomWeight() const;
     float getRandomBias() const;
-    void backpropogate(const float *expected_output);
+    void backpropogate(const std::vector<float> expected_output);
 };
