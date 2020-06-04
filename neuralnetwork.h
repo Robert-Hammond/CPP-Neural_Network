@@ -1,5 +1,6 @@
 /**
- * Header for the NeuralNet
+ * neuralnetwork.h
+ * @author Robert Hammond
  */
 #include <string>
 #include <vector>
@@ -52,8 +53,8 @@ private:
     std::vector<std::vector<float>> biases;
 
     // CONSTANTS
-    const float MIN_WEIGHT = -0.5, MAX_WEIGHT = 0.5,
-                MIN_BIAS = -0.5, MAX_BIAS = 0.5;
+    const float MIN_WEIGHT = -0.1, MAX_WEIGHT = 0.1,
+                MIN_BIAS = -0.1, MAX_BIAS = 0.1;
     float learning_rate = 0.03;
 
     // PRIVATE HELPER METHODS

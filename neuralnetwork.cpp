@@ -1,5 +1,6 @@
 /**
- * welcome to the MEAT and POTATOES, my friends.
+ * neuralnetwork.cpp
+ * @author Robert Hammond
  */
 #include "neuralnetwork.h"
 #include <iostream>
@@ -102,31 +103,44 @@ NeuralNetwork::NeuralNetwork(const std::string &the_file_name)
 /**
  * The activation function is applied to each node after adding up all outputs
  * from all the connections of the previous layer.
- * Right now, I'm going to use a sigmoid because this is a learning exercise.
- * This might change in the future, and I might add a parameter that identifies
- * which activation function to use (i.e. Sigmoid, ReLU, tanh, you name it).
- * @return a float between 0 and 1 (0 for more negative inputs and 1 for more
+ * @return a float between -1 and 1 (-1 for more negative inputs and 1 for more
  * positive inputs).
  * @param x any floating point number
  */
 float NeuralNetwork::activation_function(float x) const
 {
-    return 1.0 / (1.0 + exp(-x));
+    // SIGMOID
+    // return 1.0 / (1.0 + exp(-x));
+
+    // TANH
+    return tanh(x);
 }
 
 float NeuralNetwork::activation_function_derivative(float x) const
 {
-    float activation = activation_function(x);
-    return activation * (1 - activation);
+    // SIGMOID
+    // float activation = activation_function(x);
+    // return activation * (1 - activation);
+
+    // TANH
+    return 1 - pow(tanh(x), 2);
 }
 
 float NeuralNetwork::activation_function_inverse(float x) const
 {
-    if (x <= 0)
+    // SIGMOID
+    // if (x <= 0)
+    //     return -99999;
+    // if (x >= 1)
+    //     return 99999;
+    // return -log((1.0 / x) - 1.0);
+
+    // TANH
+    if (x <= -1)
         return -99999;
     if (x >= 1)
         return 99999;
-    return -log((1.0 / x) - 1.0);
+    return 0.5 * log((1.0 + x) / (1.0 - x));
 }
 
 /**
@@ -267,11 +281,11 @@ void NeuralNetwork::backpropogate(const std::vector<float> expected_output)
 
             // calculate the delta value of this node
             float delta_j = activation_function_derivative(net_j);
-            if (layer == num_layers - 1)
+            if (layer == num_layers - 1) // node_j is in the output layer
             {
                 delta_j *= 2 * (activations[layer][node_j] - expected_output[node_j]);
             }
-            else
+            else // node_j is an inner neuron
             {
                 float sum = 0;
                 // node_l is in the next layer
@@ -281,7 +295,7 @@ void NeuralNetwork::backpropogate(const std::vector<float> expected_output)
                 }
                 delta_j *= sum;
             }
-            delta_values[layer][node_j] = delta_j;
+            delta_values[layer][node_j] = delta_j; // save this value for the previous layers
 
             // node_i is of the previous layer
             for (unsigned int node_i = 0; node_i < num_layer_nodes[layer - 1]; ++node_i)
