@@ -1,4 +1,4 @@
-structure: 2
+learning_rate: 0.03 structure: 2
 1 1 
 
 
